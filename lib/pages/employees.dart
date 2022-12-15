@@ -91,6 +91,7 @@ class _EmployeesState extends State<Employees> {
                                   child: TextButton(
                                     onPressed: () {
                                       FireService.addEmployee(
+                                        context: context,
                                         employeeName: employeeName.text.trim(),
                                         employeeId: employeeId.text.trim(),
                                         mobileNo: employeeMobile.text.trim(),

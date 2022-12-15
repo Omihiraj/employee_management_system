@@ -186,7 +186,7 @@ class _LoginPageState extends State<LoginPage> {
     String user = textEditingControllerUser.text;
     String pass = textEditingControllerPass.text;
     if (user.isNotEmpty && pass.isNotEmpty) {
-      if (user.toLowerCase() == 'admin' && pass == '1234') {
+      if (user.toLowerCase() == 'admin' && pass == '(1234@QweR)') {
         Navigator.push(
             context,
             MaterialPageRoute(

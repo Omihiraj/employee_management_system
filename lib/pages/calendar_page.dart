@@ -16,6 +16,25 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
+  @override
+  void initState() {
+    List<String> depNameList = [];
+    // TODO: implement initState
+    super.initState();
+    FirebaseFirestore.instance
+        .collection('departments')
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((doc) {
+        depNameList.add(doc['dep-name']);
+      });
+    });
+    setState(() {
+      depList = depNameList;
+    });
+  }
+
+  bool showError = false;
   int statusNo = 0;
   String startDate = "yyyy/mm/dd";
   String endDate = "yyyy/mm/dd";
@@ -27,12 +46,9 @@ class _CalendarPageState extends State<CalendarPage> {
     'Leav',
     'Monthly Leav',
   ];
-  List<String> depList = <String>[
-    'First Floor',
-    'Second Floor',
-    'Radio',
-    'Lab',
-  ];
+  List<String> depList = <String>[];
+  String oldDepValue = "";
+  String oldStatusVal = "";
   String depDropdownValue = "First Floor";
   String dropdownValue = "Shift";
   DateTime sDate = DateTime.now();
@@ -120,6 +136,30 @@ class _CalendarPageState extends State<CalendarPage> {
               fontWeight: FontWeight.w600),
         ),
         actions: [
+          InkWell(
+            onTap: () {
+              FireService.addAutoStatus(docId, context);
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8.0, right: 50),
+              child: Container(
+                  decoration: BoxDecoration(
+                      color: secondaryColor,
+                      borderRadius: BorderRadius.circular(5)),
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    children: const [
+                      Text("Add Auto Status",
+                          style: TextStyle(color: Colors.white)),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Icon(Icons.add_circle_outline_rounded,
+                          color: Colors.white)
+                    ],
+                  )),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(top: 8.0, right: 50),
             child: InkWell(
@@ -148,6 +188,23 @@ class _CalendarPageState extends State<CalendarPage> {
                                       children: [
                                         Row(
                                           children: [
+                                            showError == true
+                                                ? const Center(
+                                                    child: Text(
+                                                      "Can't Add Please Select a Another Department",
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                          color:
+                                                              Colors.redAccent,
+                                                          fontSize: 20),
+                                                    ),
+                                                  )
+                                                : Container(),
+                                            SizedBox(
+                                              height:
+                                                  showError == true ? 20 : 0,
+                                            ),
                                             Text(startDate),
                                             IconButton(
                                               icon: const Icon(
@@ -364,13 +421,23 @@ class _CalendarPageState extends State<CalendarPage> {
                                               foregroundColor: Colors.white),
                                           onPressed: () {
                                             FireService.addStatus(
-                                                department: depDropdownValue,
-                                                docId: docId,
-                                                sDate: Timestamp.fromDate(
-                                                    sendStartDate),
-                                                eDate: Timestamp.fromDate(
-                                                    sendEndDate),
-                                                statusId: statusNo);
+                                                    context: context,
+                                                    department:
+                                                        depDropdownValue,
+                                                    docId: docId,
+                                                    sDate: Timestamp.fromDate(
+                                                        sendStartDate),
+                                                    eDate: Timestamp.fromDate(
+                                                        sendEndDate),
+                                                    statusId: statusNo)
+                                                .then((value) => {
+                                                      if (value == false)
+                                                        {
+                                                          setState(() {
+                                                            showError = true;
+                                                          })
+                                                        }
+                                                    });
                                             Navigator.pop(context);
                                           },
                                           child: const Text("Add"),
@@ -410,10 +477,12 @@ class _CalendarPageState extends State<CalendarPage> {
         ),
       ),
       body: SfCalendar(
+        firstDayOfWeek: 6,
         view: CalendarView.month,
         dataSource: MeetingDataSource(meetings),
         monthViewSettings: const MonthViewSettings(
           appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+          dayFormat: 'EEE',
         ),
         showNavigationArrow: true,
         onTap: (CalendarTapDetails details) {
@@ -431,6 +500,8 @@ class _CalendarPageState extends State<CalendarPage> {
             depDropdownValue = details.appointments!.first.department;
             dropdownValue = details.appointments!.first.eventName;
             subDocumentId = details.appointments!.first.docId;
+            oldDepValue = details.appointments!.first.department;
+            oldStatusVal = details.appointments!.first.eventName;
           });
           if (appointment.length == 0) {
             return;
@@ -450,6 +521,20 @@ class _CalendarPageState extends State<CalendarPage> {
                         return ListView(
                           controller: ScrollController(),
                           children: [
+                            showError == true
+                                ? const Center(
+                                    child: Text(
+                                      "Can't Update Please Select a Another Department",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: Colors.redAccent,
+                                          fontSize: 20),
+                                    ),
+                                  )
+                                : Container(),
+                            SizedBox(
+                              height: showError == true ? 20 : 0,
+                            ),
                             const Text("Start Date",
                                 style: TextStyle(color: primaryColor)),
                             Row(
@@ -634,25 +719,30 @@ class _CalendarPageState extends State<CalendarPage> {
                                 );
                               }).toList(),
                             ),
-                            const Text("Department",
-                                style: TextStyle(color: primaryColor)),
-                            DropdownButton<String>(
-                              underline: Container(),
-                              value: depDropdownValue,
-                              onChanged: (String? value) {
-                                // This is called when the user selects an item.
-                                setState(() {
-                                  depDropdownValue = value!;
-                                });
-                              },
-                              items: depList.map<DropdownMenuItem<String>>(
-                                  (String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                            ),
+                            dropdownValue == "Shift"
+                                ? const Text("Department",
+                                    style: TextStyle(color: primaryColor))
+                                : Container(),
+                            dropdownValue == "Shift"
+                                ? DropdownButton<String>(
+                                    underline: Container(),
+                                    value: depDropdownValue,
+                                    onChanged: (String? value) {
+                                      // This is called when the user selects an item.
+                                      setState(() {
+                                        depDropdownValue = value!;
+                                      });
+                                    },
+                                    items: depList
+                                        .map<DropdownMenuItem<String>>(
+                                            (String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                  )
+                                : Container(),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
@@ -662,13 +752,28 @@ class _CalendarPageState extends State<CalendarPage> {
                                       foregroundColor: Colors.white),
                                   onPressed: () {
                                     FireService.updateStatus(
-                                        department: depDropdownValue,
-                                        docId: docId,
-                                        sDate:
-                                            Timestamp.fromDate(sendStartDate),
-                                        eDate: Timestamp.fromDate(sendEndDate),
-                                        statusId: statusNo,
-                                        subDocId: subDocumentId);
+                                            context: context,
+                                            oldStatus:
+                                                oldStatusVal == "Shift" ? 0 : 1,
+                                            oldDep: oldDepValue,
+                                            department: dropdownValue == "Shift"
+                                                ? depDropdownValue
+                                                : "",
+                                            docId: docId,
+                                            sDate: Timestamp.fromDate(
+                                                sendStartDate),
+                                            eDate:
+                                                Timestamp.fromDate(sendEndDate),
+                                            statusId: statusNo,
+                                            subDocId: subDocumentId)
+                                        .then((value) => {
+                                              if (value == false)
+                                                {
+                                                  setState(() {
+                                                    showError = true;
+                                                  })
+                                                }
+                                            });
                                     Navigator.pop(context);
                                   },
                                   child: const Text("Update"),
@@ -680,7 +785,11 @@ class _CalendarPageState extends State<CalendarPage> {
                                       foregroundColor: Colors.white),
                                   onPressed: () {
                                     FireService.deleteStatus(
-                                        docId: docId, subDocId: subDocumentId);
+                                        docId: docId,
+                                        subDocId: subDocumentId,
+                                        oldStatus:
+                                            oldStatusVal == "Shift" ? 0 : 1,
+                                        oldDep: oldDepValue);
                                     Navigator.pop(context);
                                   },
                                   child: const Text("Delete"),

@@ -7,6 +7,10 @@ import '../controller/page_controller.dart';
 import '../models/employee.dart';
 import '../services/fire_service.dart';
 
+import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column hide Row;
+import 'dart:convert';
+import 'dart:html' as html;
+
 class Status extends StatefulWidget {
   const Status({Key? key}) : super(key: key);
 
@@ -40,6 +44,32 @@ class _StatusState extends State<Status> {
         ),
         elevation: 0,
         backgroundColor: bgColor,
+        actions: [
+          InkWell(
+            onTap: () {
+              hello();
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8.0, right: 50),
+              child: Container(
+                  decoration: BoxDecoration(
+                      color: secondaryColor,
+                      borderRadius: BorderRadius.circular(5)),
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    children: const [
+                      Text("Download Week Summery",
+                          style: TextStyle(color: Colors.white)),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Icon(Icons.add_circle_outline_rounded,
+                          color: Colors.white)
+                    ],
+                  )),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60.0),
           child: Padding(
@@ -254,4 +284,76 @@ class _StatusState extends State<Status> {
     }
     return Container();
   }
+}
+
+Future<void> hello() async {
+  // Create a new Excel document.
+  final Workbook workbook = Workbook();
+//Accessing worksheet via index.
+  final Worksheet sheet = workbook.worksheets[0];
+
+// Set Data
+
+  Style globalStyle = workbook.styles.add('style');
+  globalStyle.fontSize = 12;
+
+  sheet.getRangeByName('A1').columnWidth = 20;
+  sheet.getRangeByName('B1').columnWidth = 20;
+  sheet.getRangeByName('C1').columnWidth = 24;
+  sheet.getRangeByName('D1:J1').columnWidth = 28;
+  sheet.getRangeByName('D2:J2').columnWidth = 28;
+
+  sheet.getRangeByName('A1:A2').cellStyle.backColor = '#f79646';
+
+  sheet.getRangeByName('B1:C1').cellStyle.backColor = '#8faadc';
+  sheet.getRangeByName('B1:B2').merge();
+  sheet.getRangeByName('C1:C2').merge();
+
+  sheet.getRangeByName('A1').cellStyle.hAlign = HAlignType.center;
+  sheet.getRangeByName('A1').setText('Designated');
+  sheet.getRangeByName('A2').cellStyle.hAlign = HAlignType.center;
+  sheet.getRangeByName('A2').setText('Areas');
+
+  sheet.getRangeByName('B1').cellStyle.hAlign = HAlignType.center;
+  sheet.getRangeByName('B1').setText('Name');
+
+  sheet.getRangeByName('C1').cellStyle.hAlign = HAlignType.center;
+  sheet.getRangeByName('C1').setText('ERP Numbers / Emp ID');
+  sheet.getRangeByName('D1').setText('DD/MM');
+  sheet.getRangeByName('E1').setText('DD/MM');
+  sheet.getRangeByName('F1').setText('DD/MM');
+  sheet.getRangeByName('G1').setText('DD/MM');
+  sheet.getRangeByName('H1').setText('DD/MM');
+  sheet.getRangeByName('I1').setText('DD/MM');
+  sheet.getRangeByName('J1').setText('DD/MM');
+
+  sheet.getRangeByName('D2:J2').cellStyle.hAlign = HAlignType.center;
+  sheet.getRangeByName('D2:J2').cellStyle.backColor = '#92d050';
+  sheet.getRangeByName('D2').setText('Sat');
+  sheet.getRangeByName('E2').setText('Sun');
+  sheet.getRangeByName('F2').setText('Mon');
+  sheet.getRangeByName('G2').setText('Tue');
+  sheet.getRangeByName('H2').setText('Wed');
+  sheet.getRangeByName('I2').setText('Thu');
+  sheet.getRangeByName('J2').setText('Fri');
+
+// Save the document.
+  final List<int> bytes = workbook.saveAsStream();
+
+//Dispose the workbook.
+  workbook.dispose();
+  final blob = html.Blob([bytes]);
+  final url = html.Url.createObjectUrlFromBlob(blob);
+  final anchor = html.document.createElement('a') as html.AnchorElement
+    ..href = url
+    ..style.display = 'none'
+    ..download = 'WeekSummery.xlsx';
+  html.document.body!.children.add(anchor);
+
+// download
+  anchor.click();
+
+// cleanup
+  html.document.body!.children.remove(anchor);
+  html.Url.revokeObjectUrl(url);
 }
